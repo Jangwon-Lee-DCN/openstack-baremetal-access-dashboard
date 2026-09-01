@@ -2,7 +2,6 @@ from django.contrib import messages
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import redirect
 from django.views import generic
-import logging
 from uuid import uuid4
 
 from . import client
@@ -10,18 +9,9 @@ from .forms import DeployForm, PowerForm, RequestForm
 from .policy import is_dcn_admin, is_requester, roles
 
 
-LOG = logging.getLogger(__name__)
-
-
 class RequesterRequiredMixin:
     def dispatch(self, request, *args, **kwargs):
         if not is_requester(request.user):
-            LOG.warning(
-                "baremetal requester denied user_id=%s project_id=%s roles=%s",
-                getattr(request.user, "id", ""),
-                getattr(request.user, "tenant_id", ""),
-                sorted(roles(request.user)),
-            )
             return HttpResponseForbidden("baremetal requester role is required")
         return super().dispatch(request, *args, **kwargs)
 
@@ -29,12 +19,6 @@ class RequesterRequiredMixin:
 class AdminRequiredMixin:
     def dispatch(self, request, *args, **kwargs):
         if not is_dcn_admin(request.user):
-            LOG.warning(
-                "baremetal administrator denied user_id=%s project_id=%s roles=%s",
-                getattr(request.user, "id", ""),
-                getattr(request.user, "tenant_id", ""),
-                sorted(roles(request.user)),
-            )
             return HttpResponseForbidden("DCN baremetal administrator role is required")
         return super().dispatch(request, *args, **kwargs)
 
