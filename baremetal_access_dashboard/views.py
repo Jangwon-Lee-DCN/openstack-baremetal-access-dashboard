@@ -28,6 +28,10 @@ class RequestListView(RequesterRequiredMixin, generic.TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["requests"] = client.request(self.request.user, "GET", "/v1/requests")
+        for item in context["requests"]:
+            item["operations"] = client.request(
+                self.request.user, "GET", f"/v1/requests/{item['id']}/operations",
+            )
         context["offers"] = client.request(self.request.user, "GET", "/v1/offers")
         context["deploy_images"] = client.request(self.request.user, "GET", "/v1/deploy-images")
         context["can_operate"] = bool(roles(self.request.user).intersection({"baremetal_operator", "baremetal_admin"}))
@@ -74,7 +78,10 @@ class RequestActionView(RequesterRequiredMixin, generic.View):
         else:
             payload = {"version": int(request.POST["version"])}
         client.request(request.user, "POST", f"/v1/requests/{request_id}/{action}", json=payload)
-        messages.success(request, "요청 상태가 변경되었습니다.")
+        if action in {"deploy", "power"}:
+            messages.success(request, "노드 작업이 큐에 등록되었습니다.")
+        else:
+            messages.success(request, "요청 상태가 변경되었습니다.")
         return redirect("horizon:project:baremetal_access:index")
 
 

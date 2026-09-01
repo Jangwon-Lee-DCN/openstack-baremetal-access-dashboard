@@ -12,4 +12,6 @@ def test_request_table_carries_deterministic_purpose_and_node_state():
     assert "{{ node }}" in template
     assert "baremetal-deploy" in template
     assert "baremetal-power" in template
+    assert "baremetal-operations" in template
+    assert "data-operation-state" in template
     assert "{% if can_operate %}" in template
