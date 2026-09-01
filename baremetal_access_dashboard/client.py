@@ -15,6 +15,9 @@ def request(user, method: str, path: str, *, json=None, idempotency_key: str | N
     token = getattr(user, "token", None)
     if not token:
         raise AccessAPIError("A project-scoped OpenStack token is required")
+    token = getattr(token, "id", token)
+    if not isinstance(token, (str, bytes)) or not token:
+        raise AccessAPIError("A project-scoped OpenStack token is required")
     headers = {"X-Auth-Token": token, "Accept": "application/json"}
     if idempotency_key:
         headers["Idempotency-Key"] = idempotency_key

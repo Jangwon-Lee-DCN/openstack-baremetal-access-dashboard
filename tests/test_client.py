@@ -18,6 +18,20 @@ def test_project_token_is_forwarded_only_to_internal_api():
 
 
 @responses.activate
+def test_horizon_token_object_id_is_forwarded():
+    responses.get(
+        "http://access-api.test/v1/requests", json=[],
+        headers={"Content-Type": "application/json"},
+    )
+    result = request(
+        SimpleNamespace(token=SimpleNamespace(id="horizon-project-token")),
+        "GET", "/v1/requests",
+    )
+    assert result == []
+    assert responses.calls[0].request.headers["X-Auth-Token"] == "horizon-project-token"
+
+
+@responses.activate
 def test_non_json_and_error_responses_fail_closed():
     responses.get(
         "http://access-api.test/v1/requests", body="login", status=200,
