@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Bare Metal Approvals" %}{% endblock %}
+{% block main %}
+<div class="page-header"><h1>{% trans "Bare Metal Approvals" %}</h1></div>
+<table class="table table-striped" id="baremetal-approval-table">
+  <thead><tr><th>{% trans "Project" %}</th><th>{% trans "Profile" %}</th><th>{% trans "Quantity" %}</th><th>{% trans "Purpose" %}</th><th>{% trans "Status" %}</th><th>{% trans "Decision" %}</th></tr></thead>
+  <tbody>
+  {% for item in requests %}<tr data-request-id="{{ item.id }}"><td>{{ item.project_id }}</td><td>{{ item.profile }}</td><td>{{ item.quantity }}</td><td>{{ item.purpose }}</td><td>{{ item.state }}</td><td>
+    {% if item.state == 'submitted' or item.state == 'reviewing' %}
+    <form class="baremetal-approve" method="post" action="{% url 'horizon:admin:baremetal_approvals:action' item.id 'approve' %}">{% csrf_token %}<input type="hidden" name="version" value="{{ item.version }}"><button class="btn btn-primary btn-sm" type="submit">{% trans "Approve" %}</button></form>
+    <form class="baremetal-reject" method="post" action="{% url 'horizon:admin:baremetal_approvals:action' item.id 'reject' %}">{% csrf_token %}<input type="hidden" name="version" value="{{ item.version }}"><input name="reason" required maxlength="1000" aria-label="Rejection reason"><button class="btn btn-danger btn-sm" type="submit">{% trans "Reject" %}</button></form>
+    {% else %}—{% endif %}
+  </td></tr>{% empty %}<tr><td colspan="6">{% trans "No requests." %}</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% endblock %}
