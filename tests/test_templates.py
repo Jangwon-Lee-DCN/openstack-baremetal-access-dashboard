@@ -10,3 +10,6 @@ def test_request_table_carries_deterministic_purpose_and_node_state():
     assert 'data-request-id="{{ item.id }}"' in template
     assert "{{ item.state }}" in template
     assert "{{ node }}" in template
+    assert "baremetal-deploy" in template
+    assert "baremetal-power" in template
+    assert "{% if can_operate %}" in template

@@ -17,3 +17,24 @@ class RequestForm(forms.Form):
         self.fields["profile"].choices = sorted({(row["profile"], row["profile"]) for row in offers})
         racks = sorted({(row["rack"], row["rack"]) for row in offers if row.get("rack")})
         self.fields["rack"].choices = [("", "Any eligible rack"), *racks]
+
+
+class DeployForm(forms.Form):
+    version = forms.IntegerField(min_value=0, widget=forms.HiddenInput)
+    node_uuid = forms.UUIDField(widget=forms.HiddenInput)
+    image_id = forms.ChoiceField(choices=())
+    hostname = forms.RegexField(r"^[a-zA-Z0-9][a-zA-Z0-9.-]{0,62}$", max_length=63)
+    user_data = forms.CharField(required=False, max_length=65536, widget=forms.Textarea)
+
+    def __init__(self, *args, images=(), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["image_id"].choices = [(row["id"], row["name"]) for row in images]
+
+
+class PowerForm(forms.Form):
+    version = forms.IntegerField(min_value=0, widget=forms.HiddenInput)
+    node_uuid = forms.UUIDField(widget=forms.HiddenInput)
+    action = forms.ChoiceField(choices=[
+        ("on", "Power on"), ("off", "Power off"), ("reboot", "Reboot"),
+        ("soft off", "Soft power off"), ("soft reboot", "Soft reboot"),
+    ])

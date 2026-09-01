@@ -4,8 +4,8 @@ from django.shortcuts import redirect
 from django.views import generic
 
 from . import client
-from .forms import RequestForm
-from .policy import is_dcn_admin, is_requester
+from .forms import DeployForm, PowerForm, RequestForm
+from .policy import is_dcn_admin, is_requester, roles
 
 
 class RequesterRequiredMixin:
@@ -29,6 +29,8 @@ class RequestListView(RequesterRequiredMixin, generic.TemplateView):
         context = super().get_context_data(**kwargs)
         context["requests"] = client.request(self.request.user, "GET", "/v1/requests")
         context["offers"] = client.request(self.request.user, "GET", "/v1/offers")
+        context["deploy_images"] = client.request(self.request.user, "GET", "/v1/deploy-images")
+        context["can_operate"] = bool(roles(self.request.user).intersection({"baremetal_operator", "baremetal_admin"}))
         context["form"] = RequestForm(offers=context["offers"])
         return context
 
@@ -51,15 +53,27 @@ class SubmitRequestView(RequesterRequiredMixin, generic.View):
 
 
 class RequestActionView(RequesterRequiredMixin, generic.View):
-    actions = {"cancel", "return"}
+    actions = {"cancel", "return", "deploy", "power"}
 
     def post(self, request, request_id, action):
         if action not in self.actions:
             raise Http404
-        client.request(
-            request.user, "POST", f"/v1/requests/{request_id}/{action}",
-            json={"version": int(request.POST["version"])},
-        )
+        if action == "deploy":
+            images = client.request(request.user, "GET", "/v1/deploy-images")
+            form = DeployForm(request.POST, images=images)
+        elif action == "power":
+            form = PowerForm(request.POST)
+        else:
+            form = None
+        if form is not None:
+            if not form.is_valid():
+                messages.error(request, "노드 작업 입력값을 확인하십시오.")
+                return redirect("horizon:project:baremetal_access:index")
+            payload = form.cleaned_data
+            payload["node_uuid"] = str(payload["node_uuid"])
+        else:
+            payload = {"version": int(request.POST["version"])}
+        client.request(request.user, "POST", f"/v1/requests/{request_id}/{action}", json=payload)
         messages.success(request, "요청 상태가 변경되었습니다.")
         return redirect("horizon:project:baremetal_access:index")
 
