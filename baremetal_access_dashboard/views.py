@@ -28,13 +28,15 @@ class RequestListView(RequesterRequiredMixin, generic.TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["requests"] = client.request(self.request.user, "GET", "/v1/requests")
-        context["form"] = RequestForm()
+        context["offers"] = client.request(self.request.user, "GET", "/v1/offers")
+        context["form"] = RequestForm(offers=context["offers"])
         return context
 
 
 class SubmitRequestView(RequesterRequiredMixin, generic.View):
     def post(self, request):
-        form = RequestForm(request.POST)
+        offers = client.request(request.user, "GET", "/v1/offers")
+        form = RequestForm(request.POST, offers=offers)
         if not form.is_valid():
             messages.error(request, "신청 입력값을 확인하십시오.")
             return redirect("horizon:project:baremetal_access:index")
