@@ -17,13 +17,13 @@
   <tbody>{% for offer in offers %}<tr><td>{{ offer.profile }}</td><td>{{ offer.rack }}</td><td>{{ offer.available }}</td><td>{{ offer.max_lease_days }} days</td></tr>{% empty %}<tr><td colspan="4">{% trans "No nodes are currently offered." %}</td></tr>{% endfor %}</tbody>
 </table>
 <table class="table table-striped" id="baremetal-request-table">
-  <thead><tr><th>{% trans "Profile" %}</th><th>{% trans "Quantity" %}</th><th>{% trans "Until" %}</th><th>{% trans "Status" %}</th><th>{% trans "Nodes" %}</th><th>{% trans "Action" %}</th></tr></thead>
+  <thead><tr><th>{% trans "Profile" %}</th><th>{% trans "Purpose" %}</th><th>{% trans "Quantity" %}</th><th>{% trans "Until" %}</th><th>{% trans "Status" %}</th><th>{% trans "Nodes" %}</th><th>{% trans "Action" %}</th></tr></thead>
   <tbody>
   {% for item in requests %}<tr data-request-id="{{ item.id }}">
-    <td>{{ item.profile }}</td><td>{{ item.quantity }}</td><td>{{ item.requested_until }}</td><td>{{ item.state }}</td>
+    <td>{{ item.profile }}</td><td>{{ item.purpose }}</td><td>{{ item.quantity }}</td><td>{{ item.requested_until }}</td><td>{{ item.state }}</td>
     <td>{% for node in item.nodes %}<code>{{ node }}</code>{% empty %}—{% endfor %}</td>
     <td>{% if item.state == 'submitted' or item.state == 'reviewing' %}<form method="post" action="{% url 'horizon:project:baremetal_access:action' item.id 'cancel' %}">{% csrf_token %}<input type="hidden" name="version" value="{{ item.version }}"><button class="btn btn-default btn-sm" type="submit">{% trans "Cancel" %}</button></form>{% elif item.state == 'leased' %}<form method="post" action="{% url 'horizon:project:baremetal_access:action' item.id 'return' %}">{% csrf_token %}<input type="hidden" name="version" value="{{ item.version }}"><button class="btn btn-danger btn-sm" type="submit">{% trans "Return" %}</button></form>{% endif %}</td>
-  </tr>{% empty %}<tr><td colspan="6">{% trans "No requests." %}</td></tr>{% endfor %}
+  </tr>{% empty %}<tr><td colspan="7">{% trans "No requests." %}</td></tr>{% endfor %}
   </tbody>
 </table>
 {% endblock %}
