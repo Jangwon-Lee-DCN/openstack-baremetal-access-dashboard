@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openstack-baremetal-access-dashboard"
+version = "0.1.0"
+description = "Project-scoped bare metal request and approval panels for Horizon"
+requires-python = ">=3.11"
+dependencies = ["Django>=4.2,<6", "requests>=2.31,<3"]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<9", "responses>=0.25,<1"]
+
+[tool.setuptools.packages.find]
+include = ["baremetal_access_dashboard*"]
+
+[tool.setuptools.package-data]
+baremetal_access_dashboard = ["templates/**/*.html", "static/**/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
