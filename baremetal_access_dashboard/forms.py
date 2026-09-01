@@ -20,6 +20,7 @@ class RequestForm(forms.Form):
 
 
 class DeployForm(forms.Form):
+    idempotency_key = forms.CharField(widget=forms.HiddenInput, min_length=8, max_length=128)
     version = forms.IntegerField(min_value=0, widget=forms.HiddenInput)
     node_uuid = forms.UUIDField(widget=forms.HiddenInput)
     image_id = forms.ChoiceField(choices=())
@@ -32,6 +33,7 @@ class DeployForm(forms.Form):
 
 
 class PowerForm(forms.Form):
+    idempotency_key = forms.CharField(widget=forms.HiddenInput, min_length=8, max_length=128)
     version = forms.IntegerField(min_value=0, widget=forms.HiddenInput)
     node_uuid = forms.UUIDField(widget=forms.HiddenInput)
     action = forms.ChoiceField(choices=[

@@ -14,4 +14,5 @@ def test_request_table_carries_deterministic_purpose_and_node_state():
     assert "baremetal-power" in template
     assert "baremetal-operations" in template
     assert "data-operation-state" in template
+    assert 'name="idempotency_key"' in template
     assert "{% if can_operate %}" in template

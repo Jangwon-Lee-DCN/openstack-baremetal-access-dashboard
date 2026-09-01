@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import redirect
 from django.views import generic
+from uuid import uuid4
 
 from . import client
 from .forms import DeployForm, PowerForm, RequestForm
@@ -32,6 +33,10 @@ class RequestListView(RequesterRequiredMixin, generic.TemplateView):
             item["operations"] = client.request(
                 self.request.user, "GET", f"/v1/requests/{item['id']}/operations",
             )
+            item["node_controls"] = [
+                {"uuid": node, "deploy_key": str(uuid4()), "power_key": str(uuid4())}
+                for node in item.get("nodes", [])
+            ]
         context["offers"] = client.request(self.request.user, "GET", "/v1/offers")
         context["deploy_images"] = client.request(self.request.user, "GET", "/v1/deploy-images")
         context["can_operate"] = bool(roles(self.request.user).intersection({"baremetal_operator", "baremetal_admin"}))
@@ -74,10 +79,15 @@ class RequestActionView(RequesterRequiredMixin, generic.View):
                 messages.error(request, "노드 작업 입력값을 확인하십시오.")
                 return redirect("horizon:project:baremetal_access:index")
             payload = form.cleaned_data
+            idempotency_key = payload.pop("idempotency_key")
             payload["node_uuid"] = str(payload["node_uuid"])
         else:
             payload = {"version": int(request.POST["version"])}
-        client.request(request.user, "POST", f"/v1/requests/{request_id}/{action}", json=payload)
+            idempotency_key = None
+        client.request(
+            request.user, "POST", f"/v1/requests/{request_id}/{action}", json=payload,
+            idempotency_key=idempotency_key,
+        )
         if action in {"deploy", "power"}:
             messages.success(request, "노드 작업이 큐에 등록되었습니다.")
         else:

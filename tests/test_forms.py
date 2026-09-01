@@ -22,8 +22,10 @@ def test_deploy_and_power_forms_are_allowlisted():
     node = "11111111-1111-1111-1111-111111111111"
     image = "22222222-2222-2222-2222-222222222222"
     deploy = DeployForm(
-        {"version": 3, "node_uuid": node, "image_id": image, "hostname": "research-01"},
+        {"idempotency_key": "deploy-key-123", "version": 3, "node_uuid": node,
+         "image_id": image, "hostname": "research-01"},
         images=[{"id": image, "name": "Ubuntu"}],
     )
     assert deploy.is_valid(), deploy.errors
-    assert not PowerForm({"version": 3, "node_uuid": node, "action": "maintenance"}).is_valid()
+    assert not PowerForm({"idempotency_key": "power-key-123", "version": 3,
+                          "node_uuid": node, "action": "maintenance"}).is_valid()
