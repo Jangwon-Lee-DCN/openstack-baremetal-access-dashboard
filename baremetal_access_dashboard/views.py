@@ -40,7 +40,12 @@ class SubmitRequestView(RequesterRequiredMixin, generic.View):
         if not form.is_valid():
             messages.error(request, "신청 입력값을 확인하십시오.")
             return redirect("horizon:project:baremetal_access:index")
-        client.request(request.user, "POST", "/v1/requests", json=form.cleaned_data)
+        payload = dict(form.cleaned_data)
+        idempotency_key = payload.pop("idempotency_key")
+        client.request(
+            request.user, "POST", "/v1/requests", json=payload,
+            idempotency_key=idempotency_key,
+        )
         messages.success(request, "베어메탈 사용 신청이 등록되었습니다.")
         return redirect("horizon:project:baremetal_access:index")
 

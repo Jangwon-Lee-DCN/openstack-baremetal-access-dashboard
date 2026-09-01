@@ -30,3 +30,16 @@ def test_non_json_and_error_responses_fail_closed():
 def test_missing_project_token_is_rejected():
     with pytest.raises(AccessAPIError, match="project-scoped"):
         request(SimpleNamespace(token=""), "GET", "/v1/requests")
+
+
+@responses.activate
+def test_idempotency_key_is_forwarded_on_submission():
+    responses.post(
+        "http://access-api.test/v1/requests", json={"id": "request-1"},
+        headers={"Content-Type": "application/json"},
+    )
+    request(
+        SimpleNamespace(token="project-token"), "POST", "/v1/requests",
+        json={"profile": "general-1u"}, idempotency_key="request-key-123",
+    )
+    assert responses.calls[0].request.headers["Idempotency-Key"] == "request-key-123"
