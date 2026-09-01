@@ -9,11 +9,13 @@ def user(project, roles):
 
 def test_requester_requires_project_scope_and_explicit_role():
     assert is_requester(user("tenant-a", ["baremetal_requester"]))
+    assert is_requester(user("tenant-a", [{"name": "baremetal_requester"}]))
     assert not is_requester(user("", ["baremetal_requester"]))
     assert not is_requester(user("tenant-a", ["member"]))
 
 
 def test_admin_requires_exact_dcn_project_and_role():
     assert is_dcn_admin(user("dcn-project", ["baremetal_admin"]))
+    assert is_dcn_admin(user("dcn-project", [{"name": "baremetal_admin"}]))
     assert not is_dcn_admin(user("other-project", ["baremetal_admin"]))
     assert not is_dcn_admin(user("dcn-project", ["admin"]))

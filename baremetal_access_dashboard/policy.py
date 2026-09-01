@@ -5,7 +5,12 @@ REQUESTER_ROLES = frozenset({"baremetal_requester", "baremetal_operator", "barem
 
 
 def roles(user) -> set[str]:
-    return {str(role).lower() for role in (getattr(user, "roles", None) or [])}
+    names = set()
+    for role in getattr(user, "roles", None) or []:
+        name = role.get("name") if isinstance(role, dict) else role
+        if name:
+            names.add(str(name).lower())
+    return names
 
 
 def is_requester(user) -> bool:
