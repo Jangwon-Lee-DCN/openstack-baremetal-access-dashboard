@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Bare Metal Access" %}{% endblock %}
+{% block main %}
+<div class="page-header"><h1>{% trans "Bare Metal Access" %}</h1></div>
+<section class="panel panel-default">
+  <div class="panel-heading"><h2 class="panel-title">{% trans "Request nodes" %}</h2></div>
+  <div class="panel-body">
+    <form method="post" action="{% url 'horizon:project:baremetal_access:submit' %}" id="baremetal-request-form">
+      {% csrf_token %}{{ form.as_p }}
+      <button class="btn btn-primary" type="submit">{% trans "Submit request" %}</button>
+    </form>
+  </div>
+</section>
+<table class="table" id="baremetal-offer-table">
+  <thead><tr><th>{% trans "Profile" %}</th><th>{% trans "Rack" %}</th><th>{% trans "Available" %}</th><th>{% trans "Maximum lease" %}</th></tr></thead>
+  <tbody>{% for offer in offers %}<tr><td>{{ offer.profile }}</td><td>{{ offer.rack }}</td><td>{{ offer.available }}</td><td>{{ offer.max_lease_days }} days</td></tr>{% empty %}<tr><td colspan="4">{% trans "No nodes are currently offered." %}</td></tr>{% endfor %}</tbody>
+</table>
+<table class="table table-striped" id="baremetal-request-table">
+  <thead><tr><th>{% trans "Profile" %}</th><th>{% trans "Purpose" %}</th><th>{% trans "Quantity" %}</th><th>{% trans "Until" %}</th><th>{% trans "Status" %}</th><th>{% trans "Nodes" %}</th><th>{% trans "Operations" %}</th><th>{% trans "Action" %}</th></tr></thead>
+  <tbody>
+  {% for item in requests %}<tr data-request-id="{{ item.id }}">
+    <td>{{ item.profile }}</td><td>{{ item.purpose }}</td><td>{{ item.quantity }}</td><td>{{ item.requested_until }}</td><td>{{ item.state }}</td>
+    <td>{% for node in item.nodes %}<code>{{ node }}</code>{% empty %}—{% endfor %}</td>
+    <td class="baremetal-operations">{% for operation in item.operations %}<div data-operation-id="{{ operation.id }}" data-operation-state="{{ operation.state }}"><strong>{{ operation.operation }}</strong>: {{ operation.state }}{% if operation.error %}<span class="text-danger"> — {{ operation.error }}</span>{% endif %}</div>{% empty %}—{% endfor %}</td>
+    <td>{% if item.state == 'submitted' or item.state == 'reviewing' %}<form method="post" action="{% url 'horizon:project:baremetal_access:action' item.id 'cancel' %}">{% csrf_token %}<input type="hidden" name="version" value="{{ item.version }}"><button class="btn btn-default btn-sm" type="submit">{% trans "Cancel" %}</button></form>{% elif item.state == 'leased' %}
+      {% if can_operate %}{% for control in item.node_controls %}
+      <form class="baremetal-deploy" method="post" action="{% url 'horizon:project:baremetal_access:action' item.id 'deploy' %}">{% csrf_token %}<input type="hidden" name="idempotency_key" value="{{ control.deploy_key }}"><input type="hidden" name="version" value="{{ item.version }}"><input type="hidden" name="node_uuid" value="{{ control.uuid }}"><select name="image_id" required aria-label="Deploy image">{% for image in deploy_images %}<option value="{{ image.id }}">{{ image.name }}</option>{% endfor %}</select><input name="hostname" required maxlength="63" aria-label="Hostname"><textarea name="user_data" maxlength="65536" aria-label="Cloud-init user data"></textarea><button class="btn btn-primary btn-sm" type="submit" {% if not deploy_images %}disabled{% endif %}>{% trans "Deploy" %}</button></form>
+      <form class="baremetal-power" method="post" action="{% url 'horizon:project:baremetal_access:action' item.id 'power' %}">{% csrf_token %}<input type="hidden" name="idempotency_key" value="{{ control.power_key }}"><input type="hidden" name="version" value="{{ item.version }}"><input type="hidden" name="node_uuid" value="{{ control.uuid }}"><select name="action" aria-label="Power action"><option value="on">Power on</option><option value="off">Power off</option><option value="reboot">Reboot</option><option value="soft off">Soft power off</option><option value="soft reboot">Soft reboot</option></select><button class="btn btn-default btn-sm" type="submit">{% trans "Apply power action" %}</button></form>
+      {% endfor %}{% endif %}
+      <form method="post" action="{% url 'horizon:project:baremetal_access:action' item.id 'return' %}">{% csrf_token %}<input type="hidden" name="version" value="{{ item.version }}"><button class="btn btn-danger btn-sm" type="submit">{% trans "Return" %}</button></form>{% endif %}</td>
+  </tr>{% empty %}<tr><td colspan="8">{% trans "No requests." %}</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% endblock %}
