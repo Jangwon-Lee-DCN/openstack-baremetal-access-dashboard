@@ -16,3 +16,8 @@ def test_request_table_carries_deterministic_purpose_and_node_state():
     assert "data-operation-state" in template
     assert 'name="idempotency_key"' in template
     assert "{% if can_operate %}" in template
+    assert "베어메탈 서버 사용 신청" in template
+    assert "신청 가능한 서버" in template
+    assert "내 신청 내역" in template
+    assert "{{ offer.display_profile }}" in template
+    assert 'aria-label="Submit request"' in template

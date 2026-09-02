@@ -1,35 +1,58 @@
 {% extends 'base.html' %}
-{% load i18n %}
-{% block title %}{% trans "Bare Metal Access" %}{% endblock %}
+{% block title %}Bare Metal Access{% endblock %}
 {% block main %}
-<div class="page-header"><h1>{% trans "Bare Metal Access" %}</h1></div>
-<section class="panel panel-default">
-  <div class="panel-heading"><h2 class="panel-title">{% trans "Request nodes" %}</h2></div>
-  <div class="panel-body">
-    <form method="post" action="{% url 'horizon:project:baremetal_access:submit' %}" id="baremetal-request-form">
-      {% csrf_token %}{{ form.as_p }}
-      <button class="btn btn-primary" type="submit">{% trans "Submit request" %}</button>
-    </form>
-  </div>
-</section>
-<table class="table" id="baremetal-offer-table">
-  <thead><tr><th>{% trans "Profile" %}</th><th>{% trans "Rack" %}</th><th>{% trans "Available" %}</th><th>{% trans "Maximum lease" %}</th></tr></thead>
-  <tbody>{% for offer in offers %}<tr><td>{{ offer.profile }}</td><td>{{ offer.rack }}</td><td>{{ offer.available }}</td><td>{{ offer.max_lease_days }} days</td></tr>{% empty %}<tr><td colspan="4">{% trans "No nodes are currently offered." %}</td></tr>{% endfor %}</tbody>
-</table>
-<table class="table table-striped" id="baremetal-request-table">
-  <thead><tr><th>{% trans "Profile" %}</th><th>{% trans "Purpose" %}</th><th>{% trans "Quantity" %}</th><th>{% trans "Until" %}</th><th>{% trans "Status" %}</th><th>{% trans "Nodes" %}</th><th>{% trans "Operations" %}</th><th>{% trans "Action" %}</th></tr></thead>
-  <tbody>
-  {% for item in requests %}<tr data-request-id="{{ item.id }}">
-    <td>{{ item.profile }}</td><td>{{ item.purpose }}</td><td>{{ item.quantity }}</td><td>{{ item.requested_until }}</td><td>{{ item.state }}</td>
-    <td>{% for node in item.nodes %}<code>{{ node }}</code>{% empty %}—{% endfor %}</td>
-    <td class="baremetal-operations">{% for operation in item.operations %}<div data-operation-id="{{ operation.id }}" data-operation-state="{{ operation.state }}"><strong>{{ operation.operation }}</strong>: {{ operation.state }}{% if operation.error %}<span class="text-danger"> — {{ operation.error }}</span>{% endif %}</div>{% empty %}—{% endfor %}</td>
-    <td>{% if item.state == 'submitted' or item.state == 'reviewing' %}<form method="post" action="{% url 'horizon:project:baremetal_access:action' item.id 'cancel' %}">{% csrf_token %}<input type="hidden" name="version" value="{{ item.version }}"><button class="btn btn-default btn-sm" type="submit">{% trans "Cancel" %}</button></form>{% elif item.state == 'leased' %}
-      {% if can_operate %}{% for control in item.node_controls %}
-      <form class="baremetal-deploy" method="post" action="{% url 'horizon:project:baremetal_access:action' item.id 'deploy' %}">{% csrf_token %}<input type="hidden" name="idempotency_key" value="{{ control.deploy_key }}"><input type="hidden" name="version" value="{{ item.version }}"><input type="hidden" name="node_uuid" value="{{ control.uuid }}"><select name="image_id" required aria-label="Deploy image">{% for image in deploy_images %}<option value="{{ image.id }}">{{ image.name }}</option>{% endfor %}</select><input name="hostname" required maxlength="63" aria-label="Hostname"><textarea name="user_data" maxlength="65536" aria-label="Cloud-init user data"></textarea><button class="btn btn-primary btn-sm" type="submit" {% if not deploy_images %}disabled{% endif %}>{% trans "Deploy" %}</button></form>
-      <form class="baremetal-power" method="post" action="{% url 'horizon:project:baremetal_access:action' item.id 'power' %}">{% csrf_token %}<input type="hidden" name="idempotency_key" value="{{ control.power_key }}"><input type="hidden" name="version" value="{{ item.version }}"><input type="hidden" name="node_uuid" value="{{ control.uuid }}"><select name="action" aria-label="Power action"><option value="on">Power on</option><option value="off">Power off</option><option value="reboot">Reboot</option><option value="soft off">Soft power off</option><option value="soft reboot">Soft reboot</option></select><button class="btn btn-default btn-sm" type="submit">{% trans "Apply power action" %}</button></form>
-      {% endfor %}{% endif %}
-      <form method="post" action="{% url 'horizon:project:baremetal_access:action' item.id 'return' %}">{% csrf_token %}<input type="hidden" name="version" value="{{ item.version }}"><button class="btn btn-danger btn-sm" type="submit">{% trans "Return" %}</button></form>{% endif %}</td>
-  </tr>{% empty %}<tr><td colspan="8">{% trans "No requests." %}</td></tr>{% endfor %}
-  </tbody>
-</table>
+<style>
+  .baremetal-page .page-header p,.baremetal-summary { color:#6b7280; }
+  .baremetal-page .panel-body { padding:20px; }
+  .baremetal-request-grid { display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:18px 24px;max-width:900px; }
+  .baremetal-field label { display:block;font-weight:600;margin-bottom:7px; }
+  .baremetal-field-purpose { grid-column:1/-1; }
+  .baremetal-field-purpose textarea { min-height:110px;resize:vertical; }
+  .baremetal-submit { margin-top:20px; }
+  .baremetal-empty { color:#6b7280;padding:28px!important;text-align:center; }
+  .baremetal-badge { background:#eef6ff;border:1px solid #cfe4fb;border-radius:12px;color:#1f5f99;display:inline-block;padding:3px 9px; }
+  @media(max-width:767px){.baremetal-request-grid{grid-template-columns:1fr}.baremetal-field-purpose{grid-column:auto}}
+</style>
+<div class="baremetal-page">
+  <div class="page-header"><h1>Bare Metal Access</h1><p>DCN에서 제공하는 물리 서버의 사용을 신청하고 승인 및 할당 상태를 확인합니다.</p></div>
+  <section class="panel panel-default">
+    <div class="panel-heading"><h2 class="panel-title">베어메탈 서버 사용 신청</h2></div>
+    <div class="panel-body">
+      {% if offers %}
+      <form method="post" action="{% url 'horizon:project:baremetal_access:submit' %}" id="baremetal-request-form">
+        {% csrf_token %}{{ form.idempotency_key }}
+        <div class="baremetal-request-grid">{% for field in form.visible_fields %}
+          <div class="baremetal-field {% if field.name == 'purpose' %}baremetal-field-purpose{% endif %}">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+            {% if field.help_text %}<p class="help-block">{{ field.help_text }}</p>{% endif %}
+            {% for error in field.errors %}<p class="text-danger">{{ error }}</p>{% endfor %}
+          </div>{% endfor %}
+        </div>
+        <div class="baremetal-submit"><button class="btn btn-primary" type="submit" aria-label="Submit request">사용 신청 제출</button></div>
+      </form>
+      {% else %}<div class="alert alert-info">현재 신청 가능한 베어메탈 서버가 없습니다.</div>{% endif %}
+    </div>
+  </section>
+
+  <h2>신청 가능한 서버</h2><p class="baremetal-summary">관리자가 외부 사용을 허용한 서버만 표시됩니다.</p>
+  <div class="table-responsive"><table class="table table-hover" id="baremetal-offer-table">
+    <thead><tr><th>서버 유형</th><th>Rack</th><th>신청 가능 수량</th><th>최대 사용 기간</th></tr></thead>
+    <tbody>{% for offer in offers %}<tr><td><strong>{{ offer.display_profile }}</strong></td><td>{{ offer.rack }}</td><td><span class="baremetal-badge">{{ offer.available }}대</span></td><td>{{ offer.max_lease_days }}일</td></tr>{% empty %}<tr><td class="baremetal-empty" colspan="4">현재 신청 가능한 서버가 없습니다.</td></tr>{% endfor %}</tbody>
+  </table></div>
+
+  <h2>내 신청 내역</h2><p class="baremetal-summary">승인 후 할당된 서버와 수행 가능한 작업이 표시됩니다.</p>
+  <div class="table-responsive"><table class="table table-striped" id="baremetal-request-table">
+    <thead><tr><th>서버 유형</th><th>사용 목적</th><th>수량</th><th>사용 기한</th><th>상태</th><th>할당 노드</th><th>작업 상태</th><th>관리</th></tr></thead><tbody>
+    {% for item in requests %}<tr data-request-id="{{ item.id }}">
+      <td>{{ item.profile }}</td><td>{{ item.purpose }}</td><td>{{ item.quantity }}</td><td>{{ item.requested_until }}</td><td>{{ item.state }}</td>
+      <td>{% for node in item.nodes %}<code>{{ node }}</code>{% empty %}—{% endfor %}</td>
+      <td class="baremetal-operations">{% for operation in item.operations %}<div data-operation-id="{{ operation.id }}" data-operation-state="{{ operation.state }}"><strong>{{ operation.operation }}</strong>: {{ operation.state }}{% if operation.error %}<span class="text-danger"> — {{ operation.error }}</span>{% endif %}</div>{% empty %}—{% endfor %}</td>
+      <td>{% if item.state == 'submitted' or item.state == 'reviewing' %}<form method="post" action="{% url 'horizon:project:baremetal_access:action' item.id 'cancel' %}">{% csrf_token %}<input type="hidden" name="version" value="{{ item.version }}"><button class="btn btn-default btn-sm" type="submit">신청 취소</button></form>{% elif item.state == 'leased' %}
+        {% if can_operate %}{% for control in item.node_controls %}
+        <form class="baremetal-deploy" method="post" action="{% url 'horizon:project:baremetal_access:action' item.id 'deploy' %}">{% csrf_token %}<input type="hidden" name="idempotency_key" value="{{ control.deploy_key }}"><input type="hidden" name="version" value="{{ item.version }}"><input type="hidden" name="node_uuid" value="{{ control.uuid }}"><select name="image_id" required aria-label="Deploy image">{% for image in deploy_images %}<option value="{{ image.id }}">{{ image.name }}</option>{% endfor %}</select><input name="hostname" required maxlength="63" aria-label="Hostname"><textarea name="user_data" maxlength="65536" aria-label="Cloud-init user data"></textarea><button class="btn btn-primary btn-sm" type="submit" {% if not deploy_images %}disabled{% endif %}>배포</button></form>
+        <form class="baremetal-power" method="post" action="{% url 'horizon:project:baremetal_access:action' item.id 'power' %}">{% csrf_token %}<input type="hidden" name="idempotency_key" value="{{ control.power_key }}"><input type="hidden" name="version" value="{{ item.version }}"><input type="hidden" name="node_uuid" value="{{ control.uuid }}"><select name="action" aria-label="Power action"><option value="on">전원 켜기</option><option value="off">전원 끄기</option><option value="reboot">재시작</option><option value="soft off">정상 종료</option><option value="soft reboot">정상 재시작</option></select><button class="btn btn-default btn-sm" type="submit">전원 작업</button></form>{% endfor %}{% endif %}
+        <form method="post" action="{% url 'horizon:project:baremetal_access:action' item.id 'return' %}">{% csrf_token %}<input type="hidden" name="version" value="{{ item.version }}"><button class="btn btn-danger btn-sm" type="submit">서버 반환</button></form>{% endif %}</td>
+    </tr>{% empty %}<tr><td class="baremetal-empty" colspan="8">아직 제출한 신청이 없습니다.</td></tr>{% endfor %}
+    </tbody></table></div>
+</div>
 {% endblock %}

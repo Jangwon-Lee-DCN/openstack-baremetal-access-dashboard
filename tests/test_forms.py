@@ -1,4 +1,5 @@
 from baremetal_access_dashboard.forms import DeployForm, PowerForm, RequestForm
+from baremetal_access_dashboard.forms import profile_label
 
 
 def test_request_form_accepts_bounded_values():
@@ -7,6 +8,14 @@ def test_request_form_accepts_bounded_values():
         "rack": "Rack 1", "purpose": "Research workload", "idempotency_key": "request-key-123",
     }, offers=[{"profile": "general-1u", "rack": "Rack 1"}])
     assert form.is_valid(), form.errors
+    assert form.fields["quantity"].initial == 1
+    assert form.fields["lease_days"].initial == 1
+    assert form.fields["rack"].choices[0] == ("", "위치 무관")
+
+
+def test_internal_fixture_profile_has_a_user_facing_label():
+    assert profile_label("r1-102-e2e", "Rack 1") == "Rack 1 베어메탈 서버"
+    assert profile_label("gpu-large", "Rack 2") == "gpu-large"
 
 
 def test_request_form_rejects_unbounded_or_invalid_values():

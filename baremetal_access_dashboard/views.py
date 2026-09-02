@@ -5,7 +5,7 @@ from django.views import generic
 from uuid import uuid4
 
 from . import client
-from .forms import DeployForm, PowerForm, RequestForm
+from .forms import DeployForm, PowerForm, RequestForm, profile_label
 from .policy import is_dcn_admin, is_requester, roles
 
 
@@ -38,9 +38,12 @@ class RequestListView(RequesterRequiredMixin, generic.TemplateView):
                 for node in item.get("nodes", [])
             ]
         context["offers"] = client.request(self.request.user, "GET", "/v1/offers")
+        for offer in context["offers"]:
+            offer["display_profile"] = profile_label(offer["profile"], offer.get("rack", ""))
         context["deploy_images"] = client.request(self.request.user, "GET", "/v1/deploy-images")
         context["can_operate"] = bool(roles(self.request.user).intersection({"baremetal_operator", "baremetal_admin"}))
         context["form"] = RequestForm(offers=context["offers"])
+        context["page_title"] = "Bare Metal Access"
         return context
 
 
