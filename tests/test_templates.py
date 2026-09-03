@@ -8,11 +8,22 @@ def test_request_table_carries_deterministic_purpose_and_node_state():
     template = (ROOT / "baremetal_access_dashboard/templates/baremetal_access/index.html").read_text()
     assert "{{ item.purpose }}" in template
     assert 'data-request-id="{{ item.id }}"' in template
-    assert "{{ item.state }}" in template
-    assert "{{ node }}" in template
+    assert 'data-request-state="{{ item.state }}"' in template
+    assert 'id="baremetal-resource-table"' in template
+    assert "Request Bare Metal" in template
+    assert 'id="request-baremetal-modal"' in template
+    assert "Launch Bare Metal" in template
     assert "baremetal-deploy" in template
-    assert "baremetal-power" in template
     assert "baremetal-operations" in template
-    assert "data-operation-state" in template
     assert 'name="idempotency_key"' in template
-    assert "{% if can_operate %}" in template
+    assert "and can_operate" in template
+
+
+def test_detail_page_shows_sanitized_lease_and_operation_history():
+    template = (ROOT / "baremetal_access_dashboard/templates/baremetal_access/detail.html").read_text()
+    assert "Request and lease" in template
+    assert "Assigned hardware" in template
+    assert "Operation history" in template
+    assert 'data-operation-state="{{ operation.state }}"' in template
+    for forbidden in ("bmc_address", "driver_info", "password", "serial_number"):
+        assert forbidden not in template

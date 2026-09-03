@@ -10,6 +10,7 @@ def pytest_configure():
             INSTALLED_APPS=[],
             TEMPLATES=[{"BACKEND": "django.template.backends.django.DjangoTemplates", "APP_DIRS": True}],
             DCN_BAREMETAL_ADMIN_PROJECT_ID="dcn-project",
+            DCN_BAREMETAL_DOMAIN_ID="dcn-domain",
             BAREMETAL_ACCESS_API_URL="http://access-api.test/",
         )
     django.setup()
