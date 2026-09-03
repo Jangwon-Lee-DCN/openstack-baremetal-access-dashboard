@@ -2,6 +2,8 @@ from django.conf import settings
 
 
 REQUESTER_ROLES = frozenset({"baremetal_requester", "baremetal_operator", "baremetal_admin"})
+PROJECT_MEMBER_ROLES = frozenset({"member", "admin"})
+OPERATOR_ROLES = frozenset({"baremetal_operator", "baremetal_admin", "admin"})
 
 
 def roles(user) -> set[str]:
@@ -14,7 +16,21 @@ def roles(user) -> set[str]:
 
 
 def is_requester(user) -> bool:
-    return bool(getattr(user, "tenant_id", "") and roles(user).intersection(REQUESTER_ROLES))
+    if not getattr(user, "tenant_id", ""):
+        return False
+    assigned = roles(user)
+    expected_domain = getattr(settings, "DCN_BAREMETAL_DOMAIN_ID", "")
+    user_domain = getattr(user, "user_domain_id", "") or getattr(user, "domain_id", "")
+    return bool(
+        expected_domain and user_domain == expected_domain
+        and assigned.intersection(REQUESTER_ROLES | PROJECT_MEMBER_ROLES)
+    )
+
+
+def is_operator(user) -> bool:
+    if not is_requester(user):
+        return False
+    return bool(roles(user).intersection(OPERATOR_ROLES))
 
 
 def is_dcn_admin(user) -> bool:

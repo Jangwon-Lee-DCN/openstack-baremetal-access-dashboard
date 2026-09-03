@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from . import client
 from .forms import DeployForm, PowerForm, RequestForm
-from .policy import is_dcn_admin, is_requester, roles
+from .policy import is_dcn_admin, is_operator, is_requester
 
 
 class RequesterRequiredMixin:
@@ -28,19 +28,43 @@ class RequestListView(RequesterRequiredMixin, generic.TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["requests"] = client.request(self.request.user, "GET", "/v1/requests")
-        for item in context["requests"]:
+        requests = client.request(self.request.user, "GET", "/v1/requests")
+        resources = []
+        for item in requests:
             item["operations"] = client.request(
                 self.request.user, "GET", f"/v1/requests/{item['id']}/operations",
             )
-            item["node_controls"] = [
-                {"uuid": node, "deploy_key": str(uuid4()), "power_key": str(uuid4())}
-                for node in item.get("nodes", [])
-            ]
+            nodes = item.get("nodes", [])
+            if nodes:
+                for node in nodes:
+                    resources.append({**item, "node_uuid": node, "display_name": node[:12]})
+            else:
+                resources.append({**item, "node_uuid": None, "display_name": item["profile"]})
+        context["resources"] = resources
         context["offers"] = client.request(self.request.user, "GET", "/v1/offers")
         context["deploy_images"] = client.request(self.request.user, "GET", "/v1/deploy-images")
-        context["can_operate"] = bool(roles(self.request.user).intersection({"baremetal_operator", "baremetal_admin"}))
+        context["can_operate"] = is_operator(self.request.user)
         context["form"] = RequestForm(offers=context["offers"])
+        return context
+
+
+class RequestDetailView(RequesterRequiredMixin, generic.TemplateView):
+    template_name = "baremetal_access/detail.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        request_id = str(kwargs["request_id"])
+        item = client.request(self.request.user, "GET", f"/v1/requests/{request_id}")
+        context["item"] = item
+        context["operations"] = client.request(
+            self.request.user, "GET", f"/v1/requests/{request_id}/operations",
+        )
+        context["deploy_images"] = client.request(self.request.user, "GET", "/v1/deploy-images")
+        context["can_operate"] = is_operator(self.request.user) and item["state"] == "leased"
+        context["node_controls"] = [
+            {"uuid": node, "deploy_key": str(uuid4()), "power_key": str(uuid4())}
+            for node in item.get("nodes", [])
+        ]
         return context
 
 

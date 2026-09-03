@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Bare Metal Details" %}{% endblock %}
+{% block main %}
+<div class="page-header"><h1>{% trans "Bare Metal Details" %}</h1></div>
+<div class="row"><div class="col-md-6"><div class="panel panel-default"><div class="panel-heading"><h2 class="panel-title">{% trans "Request and lease" %}</h2></div><table class="table"><tbody>
+  <tr><th>{% trans "Request ID" %}</th><td><code>{{ item.id }}</code></td></tr><tr><th>{% trans "Status" %}</th><td data-request-state="{{ item.state }}">{{ item.state }}</td></tr>
+  <tr><th>{% trans "Profile" %}</th><td>{{ item.profile }}</td></tr><tr><th>{% trans "Rack" %}</th><td>{{ item.rack|default:"Any eligible rack" }}</td></tr>
+  <tr><th>{% trans "Quantity" %}</th><td>{{ item.quantity }}</td></tr><tr><th>{% trans "Lease until" %}</th><td>{{ item.requested_until }}</td></tr><tr><th>{% trans "Purpose" %}</th><td>{{ item.purpose }}</td></tr>
+</tbody></table></div></div>
+<div class="col-md-6"><div class="panel panel-default"><div class="panel-heading"><h2 class="panel-title">{% trans "Assigned hardware" %}</h2></div><div class="panel-body">{% for node in item.nodes %}<p><code>{{ node }}</code></p>{% empty %}<p class="text-muted">{% trans "Hardware is assigned only after approval." %}</p>{% endfor %}</div></div></div></div>
+<div class="panel panel-default"><div class="panel-heading"><h2 class="panel-title">{% trans "Operation history" %}</h2></div><div class="table-responsive"><table class="table table-striped" id="baremetal-operation-table"><thead><tr><th>{% trans "Operation" %}</th><th>{% trans "Node" %}</th><th>{% trans "Status" %}</th><th>{% trans "Started" %}</th><th>{% trans "Updated" %}</th><th>{% trans "Result" %}</th></tr></thead><tbody>
+{% for operation in operations %}<tr data-operation-state="{{ operation.state }}"><td>{{ operation.operation }}</td><td><code>{{ operation.node_uuid }}</code></td><td>{{ operation.state }}</td><td>{{ operation.created_at }}</td><td>{{ operation.updated_at }}</td><td>{% if operation.error %}<span class="text-danger">{{ operation.error }}</span>{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="6" class="text-muted">{% trans "No operations have run." %}</td></tr>{% endfor %}
+</tbody></table></div></div>
+<p><a class="btn btn-default" href="{% url 'horizon:project:baremetal_access:index' %}">{% trans "Back to Bare Metal Access" %}</a></p>
+{% endblock %}
