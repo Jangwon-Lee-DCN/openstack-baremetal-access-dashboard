@@ -9,6 +9,18 @@ def test_request_form_accepts_bounded_values():
     assert form.is_valid(), form.errors
 
 
+def test_request_form_uses_horizon_sized_controls_and_defaults():
+    form = RequestForm(offers=[{"profile": "general-1u", "rack": "Rack 1"}])
+    assert form.fields["quantity"].initial == 1
+    assert form.fields["lease_days"].initial == 1
+    assert form.fields["purpose"].widget.attrs["rows"] == 5
+    assert all(
+        field.widget.attrs.get("class") == "form-control"
+        for name, field in form.fields.items() if name != "idempotency_key"
+    )
+    assert form.fields["rack"].choices[0] == ("", "No preference (any eligible rack)")
+
+
 def test_request_form_rejects_unbounded_or_invalid_values():
     form = RequestForm({
         "profile": "../secret", "quantity": 17, "lease_days": 366,

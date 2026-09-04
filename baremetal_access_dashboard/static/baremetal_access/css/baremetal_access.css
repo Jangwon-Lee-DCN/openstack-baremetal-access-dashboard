@@ -1,0 +1,65 @@
+.baremetal-request-dialog {
+  width: min(760px, calc(100% - 30px));
+}
+
+.baremetal-request-fields {
+  padding: 6px 30px 4px 20px;
+}
+
+.baremetal-request-fields .form-group {
+  margin-bottom: 20px;
+}
+
+.baremetal-request-fields .control-label {
+  display: block;
+  margin-bottom: 7px;
+}
+
+.baremetal-request-fields .hz-icon-required {
+  color: #c9302c;
+  font-size: 7px;
+  margin-left: 5px;
+  vertical-align: super;
+}
+
+.baremetal-request-fields textarea.form-control {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.baremetal-request-fields .help-block {
+  margin-bottom: 0;
+}
+
+.baremetal-request-help {
+  border-left: 1px solid #e5e5e5;
+  color: #555;
+  min-height: 410px;
+  padding: 6px 20px 4px 24px;
+}
+
+.baremetal-request-help h3 {
+  font-size: 16px;
+  margin: 0 0 14px;
+}
+
+.baremetal-request-help dt {
+  margin-top: 14px;
+}
+
+.baremetal-request-help dd {
+  color: #777;
+  margin-top: 3px;
+}
+
+@media (max-width: 767px) {
+  .baremetal-request-dialog { width: auto; }
+  .baremetal-request-fields { padding: 0 15px; }
+  .baremetal-request-help {
+    border-left: 0;
+    border-top: 1px solid #e5e5e5;
+    margin-top: 8px;
+    min-height: 0;
+    padding: 20px 15px 0;
+  }
+}
