@@ -1,17 +1,37 @@
 {% extends 'base.html' %}
-{% load i18n %}
+{% load i18n static %}
 {% block title %}{% trans "Bare Metal Access" %}{% endblock %}
+{% block css %}{{ block.super }}<link rel="stylesheet" href="{% static 'baremetal_access/css/baremetal_access.css' %}">{% endblock %}
 {% block main %}
 <div class="page-header"><div class="row">
   <div class="col-sm-8"><h1>{% trans "Bare Metal Access" %}</h1></div>
   <div class="col-sm-4 text-right"><button class="btn btn-primary" type="button" data-toggle="modal" data-target="#request-baremetal-modal" id="request-baremetal-button"><span class="fa fa-plus" aria-hidden="true"></span> {% trans "Request Bare Metal" %}</button></div>
 </div></div>
 
-<div class="modal fade" id="request-baremetal-modal" tabindex="-1" role="dialog" aria-labelledby="request-baremetal-title"><div class="modal-dialog" role="document"><div class="modal-content">
+<div class="modal fade" id="request-baremetal-modal" tabindex="-1" role="dialog" aria-labelledby="request-baremetal-title"><div class="modal-dialog baremetal-request-dialog" role="document"><div class="modal-content">
   <form method="post" action="{% url 'horizon:project:baremetal_access:submit' %}" id="baremetal-request-form">{% csrf_token %}
     <div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button><h2 class="modal-title h4" id="request-baremetal-title">{% trans "Request Bare Metal" %}</h2></div>
-    <div class="modal-body">{{ form.as_p }}</div>
-    <div class="modal-footer"><button class="btn btn-default" type="button" data-dismiss="modal">{% trans "Cancel" %}</button><button class="btn btn-primary" type="submit">{% trans "Submit Request" %}</button></div>
+    <div class="modal-body"><div class="row">
+      <div class="col-sm-8 baremetal-request-fields">
+        {{ form.idempotency_key }}
+        {% if not offers %}<div class="alert alert-info" role="status">{% trans "No bare metal capacity is currently available. You can review the request requirements and try again later." %}</div>{% endif %}
+        {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+        {% for field in form.visible_fields %}<div class="form-group{% if field.errors %} has-error{% endif %}">
+          <label class="control-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="hz-icon-required fa fa-asterisk" aria-hidden="true"></span><span class="sr-only"> {% trans "required" %}</span>{% endif %}</label>
+          {{ field }}
+          {% if field.help_text %}<p class="help-block">{{ field.help_text }}</p>{% endif %}
+          {% for error in field.errors %}<p class="help-block" role="alert">{{ error }}</p>{% endfor %}
+        </div>{% endfor %}
+      </div>
+      <aside class="col-sm-4 baremetal-request-help" aria-label="{% trans 'Request guidance' %}">
+        <h3>{% trans "Request guidance" %}</h3>
+        <p>{% trans "Only capacity explicitly offered by the DCN administrator can be requested." %}</p>
+        <dl><dt>{% trans "Approval" %}</dt><dd>{% trans "The request remains read-only until an administrator approves it." %}</dd>
+          <dt>{% trans "Lease" %}</dt><dd>{% trans "Approved nodes are assigned only to the current OpenStack project." %}</dd>
+          <dt>{% trans "Return" %}</dt><dd>{% trans "Return the node when finished so it can be cleaned before reuse." %}</dd></dl>
+      </aside>
+    </div></div>
+    <div class="modal-footer"><button class="btn btn-default" type="button" data-dismiss="modal">{% trans "Cancel" %}</button><button class="btn btn-primary" type="submit"{% if not offers %} disabled{% endif %}>{% trans "Submit Request" %}</button></div>
   </form>
 </div></div></div>
 
